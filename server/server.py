@@ -126,6 +126,11 @@ def init_configuration() -> Dict[str, Any]:
         ],
         # Patient mode - if true, functions wait for task completion before returning
         "PATIENT_MODE": parse_bool_env("PATIENT", False),
+        # LLM settings
+        "LLM_MODEL": os.environ.get("LLM_MODEL", "alibaba/qwen3.5-flash"),
+        "LLM_API_KEY": os.environ.get("LLM_API_KEY", os.environ.get("OPENAI_API_KEY", "")),
+        "LLM_BASE_URL": os.environ.get("LLM_BASE_URL", "https://api.vercel.ai/v1"),
+        "LLM_TEMPERATURE": float(os.environ.get("LLM_TEMPERATURE", "0.0")),
     }
 
     return config
@@ -801,7 +806,13 @@ def main(
         )
 
     # Initialize LLM
-    llm = ChatOpenAI(model="gpt-4o", temperature=0.0)
+    llm = ChatOpenAI(
+        model=CONFIG["LLM_MODEL"],
+        temperature=CONFIG["LLM_TEMPERATURE"],
+        api_key=CONFIG["LLM_API_KEY"],
+        base_url=CONFIG["LLM_BASE_URL"],
+    )
+    logger.info(f"Using LLM: {CONFIG['LLM_MODEL']} via {CONFIG['LLM_BASE_URL']}")
 
     # Create MCP server
     app = create_mcp_server(
