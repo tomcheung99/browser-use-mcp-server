@@ -19,6 +19,12 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
     uv sync --frozen --no-install-project --no-dev
 COPY . /app
+# Initialize a git repo with a version tag so uv-dynamic-versioning works
+# (Coolify shallow clones may strip tags needed for version resolution)
+RUN if [ ! -d .git ]; then \
+      git init && git add -A && git commit -m 'build' --allow-empty; \
+    fi && \
+    git tag -f v0.0.0 2>/dev/null || true
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev
 
