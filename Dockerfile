@@ -68,7 +68,7 @@ ENV ANONYMIZED_TELEMETRY=false \
     CHROMIUM_FLAGS="--no-sandbox --headless --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage"
 
 # Install playwright and setup VNC in one layer to avoid timeout
-RUN /python/bin/python -m playwright install --with-deps --no-shell chromium && \
+RUN python -m playwright install --with-deps --no-shell chromium && \
     mkdir -p ~/.vnc && \
     printf '#!/bin/sh\nunset SESSION_MANAGER\nunset DBUS_SESSION_BUS_ADDRESS\nstartxfce4' > /root/.vnc/xstartup && \
     chmod +x /root/.vnc/xstartup && \
