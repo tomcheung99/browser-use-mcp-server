@@ -60,8 +60,6 @@ RUN apt-get update && \
 # Copy only necessary files from builder
 COPY --from=builder /python /python
 COPY --from=builder /app /app
-# Set proper permissions
-RUN chmod -R 755 /python /app
 
 ENV ANONYMIZED_TELEMETRY=false \
     PATH="/app/.venv/bin:$PATH" \
@@ -69,14 +67,13 @@ ENV ANONYMIZED_TELEMETRY=false \
     CHROME_BIN=/usr/bin/chromium \
     CHROMIUM_FLAGS="--no-sandbox --headless --disable-gpu --disable-software-rasterizer --disable-dev-shm-usage"
 
-# Combine VNC setup commands to reduce layers
-RUN mkdir -p ~/.vnc && \
+# Install playwright and setup VNC in one layer to avoid timeout
+RUN /python/bin/python -m playwright install --with-deps --no-shell chromium && \
+    mkdir -p ~/.vnc && \
     printf '#!/bin/sh\nunset SESSION_MANAGER\nunset DBUS_SESSION_BUS_ADDRESS\nstartxfce4' > /root/.vnc/xstartup && \
     chmod +x /root/.vnc/xstartup && \
-    printf '#!/bin/bash\n\n# Use Docker secret for VNC password if available, else fallback to default\nif [ -f "/run/secrets/vnc_password" ]; then\n  cat /run/secrets/vnc_password | vncpasswd -f > /root/.vnc/passwd\nelse\n  cat /run/secrets/vnc_password_default | vncpasswd -f > /root/.vnc/passwd\nfi\n\nchmod 600 /root/.vnc/passwd\nvncserver -depth 24 -geometry 1920x1080 -localhost no -PasswordFile /root/.vnc/passwd :0\nproxy-login-automator\npython /app/server --port 8000' > /app/boot.sh && \
+    printf '#!/bin/bash\n\nif [ -f "/run/secrets/vnc_password" ]; then\n  cat /run/secrets/vnc_password | vncpasswd -f > /root/.vnc/passwd\nelse\n  cat /run/secrets/vnc_password_default | vncpasswd -f > /root/.vnc/passwd\nfi\n\nchmod 600 /root/.vnc/passwd\nvncserver -depth 24 -geometry 1920x1080 -localhost no -PasswordFile /root/.vnc/passwd :0\nproxy-login-automator\npython /app/server --port 8000' > /app/boot.sh && \
     chmod +x /app/boot.sh
-
-RUN playwright install --with-deps --no-shell chromium
 
 # Add healthcheck for container orchestration (uses existing /sse endpoint)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
