@@ -44,6 +44,7 @@ from mcp.server import Server
 from mcp.server.sse import SseServerTransport
 from pythonjsonlogger import jsonlogger
 from starlette.applications import Starlette
+from starlette.responses import JSONResponse
 from starlette.routing import Mount, Route
 
 # Configure logging
@@ -839,9 +840,14 @@ def main(
             logger.error(f"Error in handle_sse: {str(e)}")
             raise
 
+    async def handle_health(request):
+        """Return a fast readiness response for container health checks."""
+        return JSONResponse({"status": "ok"})
+
     starlette_app = Starlette(
         debug=True,
         routes=[
+            Route("/health", endpoint=handle_health),
             Route("/sse", endpoint=handle_sse),
             Mount("/messages/", app=sse.handle_post_message),
         ],

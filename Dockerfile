@@ -38,6 +38,7 @@ RUN mkdir -p /run/secrets && \
 # Install required packages including Chromium and clean up in the same layer
 RUN apt-get update && \
     apt-get install --no-install-recommends -y \
+    curl \
     xfce4 \
     xfce4-terminal \
     dbus-x11 \
@@ -75,9 +76,9 @@ RUN python -m playwright install --with-deps --no-shell chromium && \
     printf '#!/bin/bash\n\nif [ -f "/run/secrets/vnc_password" ]; then\n  cat /run/secrets/vnc_password | vncpasswd -f > /root/.vnc/passwd\nelse\n  cat /run/secrets/vnc_password_default | vncpasswd -f > /root/.vnc/passwd\nfi\n\nchmod 600 /root/.vnc/passwd\nvncserver -depth 24 -geometry 1920x1080 -localhost no -PasswordFile /root/.vnc/passwd :0\nproxy-login-automator\npython /app/server --port 8000' > /app/boot.sh && \
     chmod +x /app/boot.sh
 
-# Add healthcheck for container orchestration (uses existing /sse endpoint)
+# Add healthcheck for container orchestration
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/sse').read()" 2>/dev/null || exit 1
+    CMD curl -fsS http://localhost:8000/health || exit 1
 
 EXPOSE 8000
 
